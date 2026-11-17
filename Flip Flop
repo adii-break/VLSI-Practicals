@@ -1,0 +1,145 @@
+• Verilog Code For JK Flip Flop :-
+`timescale 1ns / 1ps
+module jk_ff(
+ input wire clk,
+ input wire rst_n,
+ input wire j,
+ input wire k,
+ output reg q,
+ output wire q_bar
+);
+always @(posedge clk or posedge rst_n) begin
+ if (rst_n) begin
+ q <= 1'b0;
+ end else begin
+ case ({j, k})
+ 2'b00: q <= q;
+ 2'b01: q <= 1'b0;
+ 2'b10: q <= 1'b1;
+ 2'b11: q <= ~q;
+ endcase
+ end
+end
+assign q_bar = ~q;
+endmodule
+
+• Testbench for JK Flip Flop:-
+`timescale 1ns / 1ps
+module jk_ff_tb;
+reg clk;
+reg rst_n;
+reg j, k;
+wire q_jk, q_bar_jk;
+jk_ff uut (
+ .clk(clk), .rst_n(rst_n), .j(j), .k(k),
+ .q(q_jk), .q_bar(q_bar_jk)
+);
+always #5 clk = ~clk;
+initial begin
+ clk = 0; rst_n = 0; j = 0; k = 0;
+ #12 rst_n = 1;
+ #10 j = 1; k = 0;
+ #10 j = 0; k = 1;
+ #10 j = 1; k = 1;
+ #20 j = 0; k = 0;
+ #20 $finish;
+end
+endmodule
+
+• Verilog Code For T Flip Flop :-
+module t_ff (
+ input wire clk, // Clock signal
+ input wire rst_n, // Asynchronous active-low reset
+ input wire t, // Toggle input
+ output reg q, // Flip-flop output
+ output wire q_bar // Inverted output
+);
+always @(posedge clk or negedge rst_n) begin
+ if (!rst_n) begin
+ q <= 1'b0;
+ end else begin
+ if (t)
+ q <= ~q; // Toggle when T = 1
+ else
+ q <= q; // Hold state when T = 0
+ end
+end
+assign q_bar = ~q;
+endmodule
+
+• Testbench for T Flip Flop:-
+`timescale 1ns / 1ps
+module t_ff_tb;
+ reg clk;
+ reg rst_n;
+ // T FF signals
+ reg t;
+ wire q_t, q_bar_t;
+ // Instantiate UUTs
+ t_ff uut (
+ .clk(clk), .rst_n(rst_n), .t(t),
+ .q(q_t), .q_bar(q_bar_t)
+ );
+ // Generate 10ns Clock
+ always #5 clk = ~clk;
+ initial begin
+ // Initialize
+ clk = 0; rst_n = 0; t = 0;
+ // Release Reset
+ #12 rst_n = 1;
+ // Test T Flip-Flop
+ #10 t = 0; // Start toggling
+ #20 t = 1; // Hold state
+ #30 t = 0;
+ #50 $finish;
+ end
+endmodule
+
+D Flip flop
+d_ff.v :
+module d_ff(
+    input D,
+    input clk,
+    output reg Q,
+    output Q_bar
+);
+
+always @(posedge clk)
+begin
+    Q <= D;
+end
+
+assign Q_bar = ~Q;
+
+endmodule
+
+TestBench :
+module d_ff_tb;
+
+reg D, clk;
+wire Q, Q_bar;
+
+d_ff DUT(D, clk, Q, Q_bar);
+
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
+
+initial begin
+    D = 0;
+    #10;
+
+    D = 1;
+    #10;
+
+    D = 0;
+    #10;
+
+    D = 1;
+    #10;
+
+    $finish;
+end
+
+endmodule
