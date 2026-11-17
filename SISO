@@ -1,0 +1,220 @@
+Siso_4bit.v :
+module siso_4bit (
+    input clk_1mhz,
+    input rst,
+    input s_in,
+    output s_out
+);
+
+    reg [3:0] q;
+    reg clk_1hz;
+    reg [25:0] counter;
+
+    // Clock divider: 1 MHz to 1 Hz
+    always @(posedge clk_1mhz or negedge rst) begin
+        if (!rst) begin
+            counter <= 26'b0;
+            clk_1hz <= 0;
+        end
+        else if (counter == 26'd49_999_999) begin
+            counter <= 26'b0;
+            clk_1hz <= ~clk_1hz;
+        end
+        else begin
+            counter <= counter + 1'b1;
+        end
+    end
+
+    // Initialize shift register
+    initial q = 4'b0;
+
+    // 4-bit SISO shift register
+    always @(posedge clk_1hz or negedge rst) begin
+        if (!rst)
+            q = 4'b0;
+        else begin
+            q[3:1] = q[2:0];
+            q[0] = s_in;
+        end
+    end
+
+    // Serial output
+    assign s_out = q[3];
+
+endmodule
+
+siso_4bit_tb.v : 
+module siso_4bit_tb;
+
+    reg s_in, clk, rst;
+    wire s_out;
+
+    // Clock generation: 100 MHz (10 ns period)
+    initial clk = 0;
+
+    always begin
+        #5;
+        clk = ~clk;
+    end
+
+    // Instantiate the Unit Under Test (UUT)
+    siso_4bit UUT (
+        .clk_1mhz(clk),
+        .rst(rst),
+        .s_in(s_in),
+        .s_out(s_out)
+    );
+
+    // Apply test inputs
+    initial begin
+        rst = 0;
+        s_in = 0;
+
+        #10;
+        rst = 1;
+
+        s_in = 1;
+        #10;
+        s_in = 0;
+        #10;
+        s_in = 1;
+        #10;
+        s_in = 0;
+
+        #40;
+        $finish;
+    end
+
+    // Monitor output
+    initial begin
+        $monitor("Time: %0t | s_in = %b | s_out = %b",
+                 $time, s_in, s_out);
+    end
+
+endmodule
+
+Questions : 
+Develop Verilog Code and suitable testbench to simulate a 4 bit shift register with two modes : serial in parallel out(SIPO) and Parallel in serial out(PISO).
+
+// 4-bit Shift Register with Two Modes
+// mode = 0 : SIPO (Serial-In Parallel-Out)
+// mode = 1 : PISO (Parallel-In Serial-Out)
+
+module shift_reg_4bit (
+    input wire clk,
+    input wire rst_n,
+    input wire mode,
+    input wire load,
+    input wire si,          // Serial input (SIPO mode)
+    input wire [3:0] pi,    // Parallel input (PISO mode)
+    output wire so,         // Serial output
+    output wire [3:0] po    // Parallel output
+);
+
+    reg [3:0] q;
+
+    // Shift register operation
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            q <= 4'b0000;
+
+        else if (!mode)
+            q <= {q[2:0], si};       // SIPO: Shift left
+
+        else if (load)
+            q <= pi;                 // PISO: Load parallel data
+
+        else
+            q <= {q[2:0], 1'b0};     // PISO: Shift left
+    end
+
+    // Output assignments
+    assign so = q[3];
+    assign po = q;
+
+endmodule
+
+TestBench code :
+module shift_reg_4bit_tb;
+
+    reg clk;
+    reg rst_n;
+    reg mode;
+    reg load;
+    reg si;
+    reg [3:0] pi;
+
+    wire so;
+    wire [3:0] po;
+
+    // Instantiate the Design Under Test (DUT)
+    shift_reg_4bit DUT (
+        .clk(clk),
+        .rst_n(rst_n),
+        .mode(mode),
+        .load(load),
+        .si(si),
+        .pi(pi),
+        .so(so),
+        .po(po)
+    );
+
+    // Clock generation: 10 ns period
+    initial begin
+        clk = 0;
+        forever #5 clk = ~clk;
+    end
+
+    // Apply test inputs
+    initial begin
+        rst_n = 0;
+        mode  = 0;
+        load  = 0;
+        si    = 0;
+        pi    = 4'b0000;
+
+        #12;
+        rst_n = 1;
+
+        // SIPO mode: Serial-In Parallel-Out
+        mode = 0;
+
+        #10 si = 1;
+        #10 si = 0;
+        #10 si = 1;
+        #10 si = 1;
+        #20;
+
+        // PISO mode: Parallel-In Serial-Out
+        mode = 1;
+        pi   = 4'b1010;
+        load = 1;
+
+        #10 load = 0;
+        #50;
+
+        // Load another parallel value
+        pi   = 4'b1101;
+        load = 1;
+
+        #10 load = 0;
+        #50;
+
+        // Reset the shift register
+        rst_n = 0;
+        #20;
+        rst_n = 1;
+
+        #20;
+        $finish;
+    end
+
+    // Display simulation values
+    initial begin
+        $monitor(
+            "Time=%0t | rst_n=%b | mode=%b | load=%b | si=%b | pi=%b | po=%b | so=%b",
+            $time, rst_n, mode, load, si, pi, po, so
+        );
+    end
+
+endmodule
